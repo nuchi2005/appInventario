@@ -11,7 +11,7 @@ class StatesProvider with ChangeNotifier {
 
   StatesProvider() {
     fetchStates();
-    fetchTypesAll();
+    fetchStatesAll();
   }
 
   Future<void> fetchStates() async {
@@ -20,7 +20,7 @@ class StatesProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchTypesAll() async {
+  Future<void> fetchStatesAll() async {
     final data = await _dbHelper.getStatesAll();
     _statesAll = data;
     notifyListeners();
@@ -29,19 +29,19 @@ class StatesProvider with ChangeNotifier {
   Future<void> addState(String name) async {
     await _dbHelper.insertState(name);
     await fetchStates();
-    await fetchTypesAll();
+    await fetchStatesAll();
   }
 
   Future<void> deleteState(int id) async {
     await _dbHelper.deleteState(id);
     await fetchStates();
-    await fetchTypesAll();
+    await fetchStatesAll();
   }
 
   Future<void> updateStatePosition(int id, int position) async {
     await _dbHelper.updateStatePosition(id, position);
     await fetchStates();
-    await fetchTypesAll();
+    await fetchStatesAll();
   }
 
   Future<void> updateStatePositions() async {
@@ -49,11 +49,18 @@ class StatesProvider with ChangeNotifier {
       await _dbHelper.updateStatePosition(_states[i]['id'], i);
     }
     await fetchStates();
-    await fetchTypesAll();
+    await fetchStatesAll();
   }
 
   void updateStatesOrder(List<Map<String, dynamic>> newStates) {
     _states = newStates;
     notifyListeners();
+  }
+
+  Future<void> updateStateColor(int id, Color color) async {
+    String colorString = color.value.toRadixString(16).padLeft(8, '0');
+    await _dbHelper.updateStateColor(id, '#$colorString');
+    await fetchStates();
+    await fetchStatesAll();
   }
 }

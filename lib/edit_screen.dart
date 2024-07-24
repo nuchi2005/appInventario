@@ -50,7 +50,7 @@ class _EditScreenState extends State<EditScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(2024),
       lastDate: DateTime(2101),
       locale: const Locale('es', 'ES'), // Añadir soporte para español
     );

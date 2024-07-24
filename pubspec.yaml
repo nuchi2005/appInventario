@@ -44,6 +44,7 @@ dependencies:
   share_plus: ^7.0.0
   exif: ^2.0.4
   provider: ^6.1.1
+  flutter_colorpicker: ^1.0.3
   flutter_localizations:
     sdk: flutter
   intl: ^0.17.0

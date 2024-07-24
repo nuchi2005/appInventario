@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8, // Aumenta la versión para desencadenar onUpgrade
       onCreate: (db, version) async {
         await _createDb(db);
       },
@@ -63,7 +63,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         position INTEGER,
-        isActive INTEGER DEFAULT 1
+        isActive INTEGER DEFAULT 1,
+        color TEXT // Nueva columna para el color
       )
     ''');
 
@@ -123,6 +124,7 @@ class DatabaseHelper {
           'name': defaultStates[i],
           'position': i,
           'isActive': 1,
+          'color': '#FFFFFF' // Color por defecto
         });
       }
     }
@@ -131,21 +133,9 @@ class DatabaseHelper {
 
   Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
     print("Upgrading database from version $oldVersion to $newVersion...");
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE equipment ADD COLUMN deliveryDate TEXT');
-    }
-    if (oldVersion < 3) {
-      await db.execute(
-          'ALTER TABLE equipment ADD COLUMN status TEXT DEFAULT "Ingreso nuevo"');
-      await db.execute(
-          'ALTER TABLE equipment ADD COLUMN creationDate TEXT DEFAULT "2024-07-20"');
-      await db.rawUpdate(
-          'UPDATE equipment SET status = "Ingreso nuevo" WHERE status IS NULL');
-      await db.rawUpdate(
-          'UPDATE equipment SET creationDate = "2024-07-20" WHERE creationDate IS NULL');
-    }
     if (oldVersion < 8) {
-      await _createDb(db);
+      await db.execute(
+          'ALTER TABLE states ADD COLUMN color TEXT DEFAULT "#FFFFFF"');
     }
     print("Database upgraded successfully.");
   }
@@ -229,8 +219,12 @@ class DatabaseHelper {
     int maxPosition = Sqflite.firstIntValue(
             await db.rawQuery('SELECT MAX(position) FROM states')) ??
         0;
-    await db.insert(
-        'states', {'name': name, 'position': maxPosition + 1, 'isActive': 1});
+    await db.insert('states', {
+      'name': name,
+      'position': maxPosition + 1,
+      'isActive': 1,
+      'color': '#FFFFFF'
+    });
   }
 
   Future<List<Map<String, dynamic>>> getStates() async {
@@ -253,6 +247,12 @@ class DatabaseHelper {
   Future<void> updateStatePosition(int id, int position) async {
     final db = await database;
     await db.update('states', {'position': position},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> updateStateColor(int id, String color) async {
+    final db = await database;
+    await db.update('states', {'color': color},
         where: 'id = ?', whereArgs: [id]);
   }
 

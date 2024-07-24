@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'states_provider.dart';
 
@@ -80,6 +81,62 @@ class _AdminStatesScreenState extends State<AdminStatesScreen> {
     }
   }
 
+  void _changeColor(int id, StatesProvider statesProvider) {
+    Color initialColor = Colors.white;
+    const List<Color> availableColors = [
+      Color(0x80FFFFFF), // Blanco translúcido
+      Color(0x80FFEBEE), // Rosa claro translúcido
+      Color(0x80FCE4EC), // Rosa translúcido
+      Color(0x80E1F5FE), // Azul claro translúcido
+      Color(0x80E3F2FD), // Azul translúcido
+      Color(0x80E8F5E9), // Verde claro translúcido
+      Color(0x80F1F8E9), // Verde translúcido
+      Color(0x80FFF3E0), // Naranja claro translúcido
+      Color(0x80FFF8E1), // Amarillo translúcido
+      Color(0x80E0F7FA), // Cian claro translúcido
+      Color(0x80F3E5F5), // Violeta claro translúcido
+      Color(0x80FFCDD2), // Rojo claro translúcido
+      Color(0x80D1C4E9), // Púrpura translúcido
+      Color(0x80C5CAE9), // Azul translúcido
+      Color(0x80BBDEFB), // Azul cielo translúcido
+      Color(0x80B3E5FC), // Azul celeste translúcido
+    ];
+    for (var state in statesProvider.states) {
+      if (state['id'] == id) {
+        initialColor = Color(
+            int.parse(state['color'].substring(1, 7), radix: 16) + 0xFF000000);
+        break;
+      }
+    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        Color pickedColor = initialColor;
+        return AlertDialog(
+          title: Text('Selecciona un color'),
+          content: SingleChildScrollView(
+            child: BlockPicker(
+              pickerColor: pickedColor,
+              availableColors: availableColors,
+              onColorChanged: (Color color) {
+                pickedColor = color;
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Guardar'),
+              onPressed: () {
+                statesProvider.updateStateColor(id, pickedColor);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,10 +200,31 @@ class _AdminStatesScreenState extends State<AdminStatesScreen> {
                               child: ListTile(
                                 leading: Icon(Icons.drag_handle),
                                 title: Text(state['name'] ?? 'Sin nombre'),
-                                trailing: IconButton(
-                                  icon: Icon(Icons.delete),
-                                  onPressed: () => _confirmDeleteState(
-                                      statesProvider, state['id']),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => _changeColor(
+                                          state['id'], statesProvider),
+                                      child: Container(
+                                        width: 40,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: Color(int.parse(
+                                              state['color'].substring(1),
+                                              radix: 16)),
+                                          border: Border.all(
+                                              color:
+                                                  Colors.black), // Borde negro
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete),
+                                      onPressed: () => _confirmDeleteState(
+                                          statesProvider, state['id']),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

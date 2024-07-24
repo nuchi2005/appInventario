@@ -18,19 +18,42 @@ class ListScreen extends StatefulWidget {
   _ListScreenState createState() => _ListScreenState();
 }
 
-class _ListScreenState extends State<ListScreen> {
+class _ListScreenState extends State<ListScreen> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _filteredEquipmentList = [];
   final _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _selectedStatusFilter = 'Todos';
   String _selectedSeenFilter = 'Todos';
+  bool _isKeyboardVisible = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Provider.of<EquipmentsProvider>(context, listen: false)
           .fetchEquipments();
       _filterList();
+    });
+    _searchController.addListener(_performSearch);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.removeListener(_performSearch);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    final keyboardHeight = WidgetsBinding.instance.window.viewInsets.bottom;
+    setState(() {
+      _isKeyboardVisible = keyboardHeight > 0;
+      print('Keyboard is ${_isKeyboardVisible ? 'visible' : 'hidden'}');
     });
   }
 
@@ -38,19 +61,13 @@ class _ListScreenState extends State<ListScreen> {
     _filterList();
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Devolucion':
-        return Colors.yellow.shade100;
-      case 'Ingreso nuevo':
-        return Colors.green.shade100;
-      case 'Facturada':
-        return Colors.blue.shade100;
-      case 'Finalizada':
-        return Colors.red.shade100;
-      default:
-        return Colors.grey.shade100;
-    }
+  Color _getStatusColor(String status, StatesProvider statesProvider) {
+    final state = statesProvider.states.firstWhere(
+      (state) => state['name'] == status,
+      orElse: () => {'color': '#FFFFFF'},
+    );
+    return Color(
+        int.parse(state['color'].substring(1), radix: 16) + 0xFF000000);
   }
 
   void _filterList() {
@@ -188,6 +205,7 @@ class _ListScreenState extends State<ListScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    focusNode: _searchFocusNode,
                     decoration: InputDecoration(
                       labelText: 'Buscar por número orden',
                       suffixIcon: IconButton(
@@ -215,6 +233,8 @@ class _ListScreenState extends State<ListScreen> {
                       FilterChip(
                         label: Text('Todos'),
                         selected: _selectedStatusFilter == 'Todos',
+                        backgroundColor: Color.fromARGB(255, 178, 247, 214),
+                        selectedColor: Color.fromARGB(255, 178, 247, 214),
                         onSelected: (bool selected) {
                           setState(() {
                             _selectedStatusFilter = 'Todos';
@@ -226,6 +246,14 @@ class _ListScreenState extends State<ListScreen> {
                         return FilterChip(
                           label: Text(state['name']),
                           selected: _selectedStatusFilter == state['name'],
+                          backgroundColor: Color(int.parse(
+                                  state['color'].substring(1),
+                                  radix: 16) +
+                              0xFF000000),
+                          selectedColor: Color(int.parse(
+                                  state['color'].substring(1),
+                                  radix: 16) +
+                              0xFF000000),
                           onSelected: (bool selected) {
                             setState(() {
                               _selectedStatusFilter =
@@ -250,6 +278,8 @@ class _ListScreenState extends State<ListScreen> {
                 children: [
                   FilterChip(
                     label: Text('Todos'),
+                    backgroundColor: Color.fromARGB(255, 178, 247, 214),
+                    selectedColor: Color.fromARGB(255, 178, 247, 214),
                     selected: _selectedSeenFilter == 'Todos',
                     onSelected: (bool selected) {
                       setState(() {
@@ -260,6 +290,8 @@ class _ListScreenState extends State<ListScreen> {
                   ),
                   FilterChip(
                     label: Text('Sí'),
+                    backgroundColor: Color.fromARGB(255, 189, 227, 245),
+                    selectedColor: Color.fromARGB(255, 189, 227, 245),
                     selected: _selectedSeenFilter == 'Sí',
                     onSelected: (bool selected) {
                       setState(() {
@@ -270,6 +302,8 @@ class _ListScreenState extends State<ListScreen> {
                   ),
                   FilterChip(
                     label: Text('No'),
+                    backgroundColor: Color.fromARGB(255, 248, 206, 206),
+                    selectedColor: Color.fromARGB(255, 248, 206, 206),
                     selected: _selectedSeenFilter == 'No',
                     onSelected: (bool selected) {
                       setState(() {
@@ -283,8 +317,8 @@ class _ListScreenState extends State<ListScreen> {
             ),
           ),
           Expanded(
-            child: Consumer<EquipmentsProvider>(
-              builder: (context, equipmentsProvider, child) {
+            child: Consumer2<EquipmentsProvider, StatesProvider>(
+              builder: (context, equipmentsProvider, statesProvider, child) {
                 if (_filteredEquipmentList.isEmpty) {
                   return Center(
                     child: Text('No se encontraron resultados.'),
@@ -325,7 +359,8 @@ class _ListScreenState extends State<ListScreen> {
                     return Card(
                       margin: const EdgeInsets.symmetric(
                           vertical: 4.0, horizontal: 2.0),
-                      color: _getStatusColor(equipment['status']),
+                      color:
+                          _getStatusColor(equipment['status'], statesProvider),
                       child: ListTile(
                         title: Text(equipment['orderNumber']),
                         subtitle: Column(
@@ -390,14 +425,17 @@ class _ListScreenState extends State<ListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => MainScreen()),
-          );
-        },
-        child: Icon(Icons.add),
+      floatingActionButton: Offstage(
+        offstage: _isKeyboardVisible,
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => MainScreen()),
+            );
+          },
+          child: Icon(Icons.add),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
